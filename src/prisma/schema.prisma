@@ -1,0 +1,75 @@
+datasource db {
+  provider = "postgresql"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id            String         @id @default(uuid())
+  email         String         @unique
+  password      String
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  emailAccounts EmailAccount[]
+}
+
+model EmailAccount {
+  id       String @id @default(uuid())
+  userId   String
+  user     User   @relation(fields: [userId], references: [id])
+  email    String
+  provider String // e.g., "outlook", "gmail"
+  password String // Encrypted IMAP/App Password
+
+  // Sync state
+  lastFetchedUid Int? // Track last UID to prevent duplicate fetching
+  lastSyncedAt   DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  emails    Email[]
+  flags     String[]
+
+  @@unique([userId, email])
+}
+
+model Email {
+  id        String       @id @default(uuid())
+  accountId String
+  account   EmailAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  uid         Int // IMAP UID for delta syncs
+  messageId   String? // Global message ID from header
+  from        String
+  to          String[]
+  subject     String
+  body        String // Plain text for search
+  htmlBody    String? // Original HTML
+  folder      String // e.g., "INBOX", "Sent"
+  isRead      Boolean      @default(false)
+  attachments Attachment[]
+
+  receivedAt DateTime
+  fetchedAt  DateTime @default(now())
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([accountId])
+  @@index([createdAt])
+}
+
+model Attachment {
+  id      String @id @default(uuid())
+  emailId String
+  email   Email  @relation(fields: [emailId], references: [id], onDelete: Cascade)
+
+  filename    String
+  contentType String // e.g., "application/pdf"
+  size        Int // In bytes
+  contentId   String? // For inline images (CID)
+  storageUrl  String? // URL if you upload to S3/Cloudinary
+
+  createdAt DateTime @default(now())
+}
