@@ -111,12 +111,6 @@ export class SyncService {
         }
         const password = EncryptionUtil.decrypt(account.password, encryptionKey);
 
-        // TEMPORARY DEBUG LOGGING - REMOVE IN PRODUCTION
-        console.log('=== IMAP CREDENTIALS DEBUG (syncFolder) ===');
-        console.log('Email:', account.email);
-        console.log('Password:', password);
-        console.log('===========================================');
-
         // Create IMAP client
         const client = new ImapClientUtil({
             host: config.host,
