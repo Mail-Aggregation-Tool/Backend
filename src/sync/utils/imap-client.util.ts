@@ -58,9 +58,6 @@ export class ImapClientUtil {
                     `Certificate loading failed: ${certError.message}. Proceeding without custom certificates.`,
                 );
             }
-
-            const tls = this.configService.get('TLS')
-
             const options: ImapFlowOptions = {
                 host: this.config.host,
                 port: this.config.port,
@@ -69,7 +66,8 @@ export class ImapClientUtil {
                 connectionTimeout: IMAP_SETTINGS.TIMEOUT,
                 greetingTimeout: IMAP_SETTINGS.TIMEOUT,
                 tls:{
-                    rejectUnauthorized: tls||true,
+                    host:this.config.host,
+                    rejectUnauthorized: this.config.secure,
                 }
             };
 
