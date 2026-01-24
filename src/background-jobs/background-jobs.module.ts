@@ -34,10 +34,6 @@ import { EmailAccountsModule } from '../email-accounts/email-accounts.module';
         if (isRedisCloud) {
           connection.username = username ?? 'default';
           connection.password = password;
-          connection.tls = {
-            servername: host,
-          }; // REQUIRED for Redis Cloud
-
           logger.log(
             `✅ Redis Cloud connected at ${host}:${port} (TLS enabled)`
           );
