@@ -64,10 +64,14 @@ export class ImapClientUtil {
                 connectionTimeout: IMAP_SETTINGS.TIMEOUT,
                 greetingTimeout: IMAP_SETTINGS.TIMEOUT,
                 // Add TLS configuration with loaded certificates
-                tls: {
-                    rejectUnauthorized: false,
-                    servername: 'imap.gmail.com',
-                },
+               ...(this.config.secure
+        ? {
+              tls: {
+                  rejectUnauthorized: false, // optional for self-signed certs
+                  ca: certificates,          // optional if you loaded any
+              },
+          }
+        : {}),
             };
 
             this.client = new ImapFlow(options);
