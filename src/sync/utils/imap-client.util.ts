@@ -59,7 +59,7 @@ export class ImapClientUtil {
                 );
             }
 
-            const isDev = this.configService.get('NODE_ENV') === 'development';
+            const tls = this.configService.get('TLS')
 
             const options: ImapFlowOptions = {
                 host: this.config.host,
@@ -71,7 +71,7 @@ export class ImapClientUtil {
                 ...(this.config.secure
                     ? {
                         tls: {
-                            rejectUnauthorized: !isDev, // false in dev, true in prod
+                            rejectUnauthorized: tls, // false in dev, true in prod
                         },
                     }
                     : {}),
