@@ -1,6 +1,7 @@
 import { ImapFlow, ImapFlowOptions } from 'imapflow';
 import { Logger } from '@nestjs/common';
 import { IMAP_SETTINGS } from '../../common/constants/email-sync.constants';
+import { CertificateLoader } from './cert-loader.util';
 
 export interface ImapConnectionConfig {
     host: string;
@@ -39,6 +40,21 @@ export class ImapClientUtil {
      */
     async connect(): Promise<void> {
         try {
+            // Load SSL certificates for secure connections
+            let certificates: Buffer[] = [];
+            try {
+                certificates = await CertificateLoader.loadCertificates();
+                if (certificates.length > 0) {
+                    this.logger.debug(
+                        `Loaded ${certificates.length} SSL certificate(s) for IMAP connection`,
+                    );
+                }
+            } catch (certError) {
+                this.logger.warn(
+                    `Certificate loading failed: ${certError.message}. Proceeding without custom certificates.`,
+                );
+            }
+
             const options: ImapFlowOptions = {
                 host: this.config.host,
                 port: this.config.port,
@@ -47,6 +63,11 @@ export class ImapClientUtil {
                 logger: false,
                 connectionTimeout: IMAP_SETTINGS.TIMEOUT,
                 greetingTimeout: IMAP_SETTINGS.TIMEOUT,
+                // Add TLS configuration with loaded certificates
+                tls: {
+                    rejectUnauthorized: false,
+                    servername: 'imap.gmail.com',
+                },
             };
 
             this.client = new ImapFlow(options);

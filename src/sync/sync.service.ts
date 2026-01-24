@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { EmailAccountsRepository } from '../email-accounts/email-accounts.repository';
 import { EmailsRepository } from '../emails/emails.repository';
 import { ImapClientUtil } from './utils/imap-client.util';
@@ -7,7 +8,7 @@ import { FolderNormalizerUtil } from './utils/folder-normalizer.util';
 import { getConfigFromEmail, detectProvider } from '../config/imap-providers.config';
 import { SYNC_SETTINGS } from '../common/constants/email-sync.constants';
 import { Prisma } from '@prisma/client';
-import * as argon2 from 'argon2';
+import { EncryptionUtil } from '../common/utils/encryption.util';
 
 export interface SyncResult {
     accountId: string;
@@ -23,6 +24,7 @@ export class SyncService {
     constructor(
         private emailAccountsRepository: EmailAccountsRepository,
         private emailsRepository: EmailsRepository,
+        private configService: ConfigService,
     ) { }
 
     /**
@@ -34,10 +36,12 @@ export class SyncService {
             throw new Error(`Account not found: ${accountId}`);
         }
 
-        // Decrypt password
-        const password = await argon2.verify(account.password, account.password)
-            ? account.password
-            : account.password;
+        // Decrypt password for IMAP authentication
+        const encryptionKey = this.configService.get<string>('ENCRYPTION_KEY');
+        if (!encryptionKey) {
+            throw new Error('ENCRYPTION_KEY not configured');
+        }
+        const password = EncryptionUtil.decrypt(account.password, encryptionKey);
 
         // Get IMAP config
         const config = getConfigFromEmail(account.email);
@@ -100,10 +104,18 @@ export class SyncService {
             throw new Error(`Unable to get IMAP config for ${account.email}`);
         }
 
-        // We need the actual password, not the hash
-        // In production, you'd decrypt this properly
-        // For now, we'll need to pass the decrypted password from the job
-        const password = account.password; // This should be decrypted
+        // Decrypt password for IMAP authentication
+        const encryptionKey = this.configService.get<string>('ENCRYPTION_KEY');
+        if (!encryptionKey) {
+            throw new Error('ENCRYPTION_KEY not configured');
+        }
+        const password = EncryptionUtil.decrypt(account.password, encryptionKey);
+
+        // TEMPORARY DEBUG LOGGING - REMOVE IN PRODUCTION
+        console.log('=== IMAP CREDENTIALS DEBUG (syncFolder) ===');
+        console.log('Email:', account.email);
+        console.log('Password:', password);
+        console.log('===========================================');
 
         // Create IMAP client
         const client = new ImapClientUtil({

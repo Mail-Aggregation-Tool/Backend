@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
+import { ConfigService } from '@nestjs/config';
 import { EmailAccountsRepository } from './email-accounts.repository';
 import { CreateEmailAccountDto } from './dto/create-email-account.dto';
 import { UpdateEmailAccountDto } from './dto/update-email-account.dto';
@@ -14,7 +15,7 @@ import { EmailAccountResponseDto } from './dto/email-account-response.dto';
 import { ImapValidatorUtil } from './utils/imap-validator.util';
 import { detectProvider } from '../config/imap-providers.config';
 import { QUEUE_NAMES, JOB_TYPES } from '../common/constants/email-sync.constants';
-import * as argon2 from 'argon2';
+import { EncryptionUtil } from '../common/utils/encryption.util';
 
 @Injectable()
 export class EmailAccountsService {
@@ -23,6 +24,7 @@ export class EmailAccountsService {
     constructor(
         private emailAccountsRepository: EmailAccountsRepository,
         @InjectQueue(QUEUE_NAMES.INITIAL_SYNC) private initialSyncQueue: Queue,
+        private configService: ConfigService,
     ) { }
 
     /**
@@ -57,8 +59,12 @@ export class EmailAccountsService {
             `IMAP validation successful for ${email} (Provider: ${validation.provider})`,
         );
 
-        // Encrypt password
-        const hashedPassword = await argon2.hash(appPassword);
+        // Encrypt password (not hash - we need to decrypt it later for IMAP)
+        const encryptionKey = this.configService.get<string>('ENCRYPTION_KEY');
+        if (!encryptionKey) {
+            throw new Error('ENCRYPTION_KEY not configured');
+        }
+        const encryptedPassword = EncryptionUtil.encrypt(appPassword, encryptionKey);
 
         // Detect provider
         const provider = detectProvider(email) || 'unknown';
@@ -69,7 +75,7 @@ export class EmailAccountsService {
                 connect: { id: userId },
             },
             email,
-            password: hashedPassword,
+            password: encryptedPassword,
             provider: validation.provider || provider,
             flags: [],
         });
@@ -142,8 +148,8 @@ export class EmailAccountsService {
             throw new NotFoundException('Email account not found');
         }
 
-        // If password is being updated, validate and hash it
-        let hashedPassword: string | undefined;
+        // If password is being updated, validate and encrypt it
+        let encryptedPassword: string | undefined;
         if (updateDto.appPassword) {
             const validation = await ImapValidatorUtil.validateConnection(
                 account.email,
@@ -154,11 +160,15 @@ export class EmailAccountsService {
                 throw new BadRequestException(validation.error);
             }
 
-            hashedPassword = await argon2.hash(updateDto.appPassword);
+            const encryptionKey = this.configService.get<string>('ENCRYPTION_KEY');
+            if (!encryptionKey) {
+                throw new Error('ENCRYPTION_KEY not configured');
+            }
+            encryptedPassword = EncryptionUtil.encrypt(updateDto.appPassword, encryptionKey);
         }
 
         const updated = await this.emailAccountsRepository.update(id, {
-            ...(hashedPassword && { password: hashedPassword }),
+            ...(encryptedPassword && { password: encryptedPassword }),
         });
 
         return new EmailAccountResponseDto(updated);
