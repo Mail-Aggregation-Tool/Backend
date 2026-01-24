@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { getConfigFromEmail } from '../../config/imap-providers.config';
 import { ImapClientUtil } from '../../sync/utils/imap-client.util';
 
@@ -14,11 +15,13 @@ export class ImapValidatorUtil {
      * Validate IMAP connection with email and password
      * @param email - User's email address
      * @param password - App password
+     * @param configService - ConfigService instance
      * @returns Validation result with provider info
      */
     static async validateConnection(
         email: string,
         password: string,
+        configService: ConfigService,
     ): Promise<ValidationResult> {
         // Get IMAP config from email
         const config = getConfigFromEmail(email);
@@ -53,7 +56,7 @@ export class ImapValidatorUtil {
                 user: email,
                 pass: password,
             },
-        });
+        }, configService);
 
         if (!testResult.success) {
             return {

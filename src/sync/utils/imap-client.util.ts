@@ -1,5 +1,6 @@
 import { ImapFlow, ImapFlowOptions } from 'imapflow';
 import { Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { IMAP_SETTINGS } from '../../common/constants/email-sync.constants';
 import { CertificateLoader } from './cert-loader.util';
 
@@ -33,7 +34,10 @@ export class ImapClientUtil {
     private readonly logger = new Logger(ImapClientUtil.name);
     private reconnectAttempts = 0;
 
-    constructor(private readonly config: ImapConnectionConfig) { }
+    constructor(
+        private readonly config: ImapConnectionConfig,
+        private readonly configService: ConfigService,
+    ) { }
 
     /**
      * Connect to IMAP server
@@ -55,6 +59,8 @@ export class ImapClientUtil {
                 );
             }
 
+            const isDev = this.configService.get('NODE_ENV') === 'development';
+
             const options: ImapFlowOptions = {
                 host: this.config.host,
                 port: this.config.port,
@@ -65,11 +71,11 @@ export class ImapClientUtil {
                 ...(this.config.secure
                     ? {
                         tls: {
-                            rejectUnauthorized: process.env.NODE_ENV !== 'development', // false in dev, true in prod
+                            rejectUnauthorized: !isDev, // false in dev, true in prod
                         },
                     }
                     : {}),
-};
+            };
 
 
             this.client = new ImapFlow(options);
@@ -233,8 +239,9 @@ export class ImapClientUtil {
      */
     static async testConnection(
         config: ImapConnectionConfig,
+        configService: ConfigService,
     ): Promise<{ success: boolean; error?: string }> {
-        const client = new ImapClientUtil(config);
+        const client = new ImapClientUtil(config, configService);
 
         try {
             await client.connect();

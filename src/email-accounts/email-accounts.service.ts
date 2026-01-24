@@ -49,6 +49,7 @@ export class EmailAccountsService {
         const validation = await ImapValidatorUtil.validateConnection(
             email,
             appPassword,
+            this.configService,
         );
 
         if (!validation.success) {
@@ -154,6 +155,7 @@ export class EmailAccountsService {
             const validation = await ImapValidatorUtil.validateConnection(
                 account.email,
                 updateDto.appPassword,
+                this.configService,
             );
 
             if (!validation.success) {

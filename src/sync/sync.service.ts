@@ -58,7 +58,7 @@ export class SyncService {
                 user: account.email,
                 pass: password,
             },
-        });
+        }, this.configService);
 
         try {
             await client.connect();
@@ -120,7 +120,7 @@ export class SyncService {
                 user: account.email,
                 pass: password,
             },
-        });
+        }, this.configService);
 
         try {
             await client.connect();
