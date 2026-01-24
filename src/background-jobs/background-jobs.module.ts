@@ -36,7 +36,6 @@ import { EmailAccountsModule } from '../email-accounts/email-accounts.module';
           connection.password = password;
           connection.tls = {
             servername: host,
-            rejectUnauthorized: true,
           }; // REQUIRED for Redis Cloud
 
           logger.log(
