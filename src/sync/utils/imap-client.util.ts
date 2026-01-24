@@ -58,21 +58,19 @@ export class ImapClientUtil {
             const options: ImapFlowOptions = {
                 host: this.config.host,
                 port: this.config.port,
-                secure: this.config.secure,
+                secure: this.config.secure, // must match port (993 for SSL)
                 auth: this.config.auth,
-                logger: false,
                 connectionTimeout: IMAP_SETTINGS.TIMEOUT,
                 greetingTimeout: IMAP_SETTINGS.TIMEOUT,
-                // Add TLS configuration with loaded certificates
-               ...(this.config.secure
-        ? {
-              tls: {
-                  rejectUnauthorized: false, // optional for self-signed certs
-                  ca: certificates,          // optional if you loaded any
-              },
-          }
-        : {}),
-            };
+                ...(this.config.secure
+                    ? {
+                        tls: {
+                            rejectUnauthorized: process.env.NODE_ENV !== 'development', // false in dev, true in prod
+                        },
+                    }
+                    : {}),
+};
+
 
             this.client = new ImapFlow(options);
 
