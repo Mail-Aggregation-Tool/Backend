@@ -9,7 +9,7 @@ export class MicrosoftStrategy extends PassportStrategy(Strategy, 'microsoft') {
         super({
             clientID: configService.get<string>('MICROSOFT_CLIENT_ID') || 'process.env.MICROSOFT_CLIENT_ID',
             clientSecret: configService.get<string>('MICROSOFT_CLIENT_SECRET') || 'process.env.MICROSOFT_CLIENT_SECRET',
-            callbackURL: `https://c947a029cc8f.ngrok-free.app/auth/microsoft/callback`,
+            callbackURL: `${configService.get<string>('API_URL')}/auth/microsoft/callback`,
             scope: ['user.read', 'email', 'openid', 'profile'],
         });
     }
