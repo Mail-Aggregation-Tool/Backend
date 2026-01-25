@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { BullModule } from '@nestjs/bullmq';
 import { EmailAccountsService } from './email-accounts.service';
 import { EmailAccountsController } from './email-accounts.controller';
@@ -10,7 +10,7 @@ import { AuthModule } from '../auth/auth.module';
 @Module({
     imports: [
         PrismaModule,
-        AuthModule,
+        forwardRef(() => AuthModule),
         BullModule.registerQueue({
             name: QUEUE_NAMES.INITIAL_SYNC,
         }),

@@ -105,6 +105,64 @@ export class EmailAccountsService {
     }
 
     /**
+     * Connect a new email account via OAuth
+     */
+    async createWithOAuth(
+        userId: string,
+        email: string,
+        accessToken: string,
+        refreshToken: string,
+    ): Promise<EmailAccountResponseDto> {
+        // Check if account already exists
+        const exists = await this.emailAccountsRepository.exists(userId, email);
+        if (exists) {
+            // If exists, update tokens
+            const account = await this.emailAccountsRepository.findByUserAndEmail(userId, email);
+            if (account) {
+                await this.emailAccountsRepository.update(account.id, {
+                    accessToken,
+                    refreshToken,
+                });
+                return new EmailAccountResponseDto(account);
+            }
+        }
+
+        // Create account record
+        const account = await this.emailAccountsRepository.create({
+            user: {
+                connect: { id: userId },
+            },
+            email,
+            accessToken,
+            refreshToken,
+            provider: 'outlook', // or detect from email but usually outlook for microsoft
+            flags: [],
+        });
+
+        this.logger.log(`Email account created via OAuth: ${account.id}`);
+
+        // Queue initial sync job
+        await this.initialSyncQueue.add(
+            JOB_TYPES.SYNC_ACCOUNT,
+            {
+                accountId: account.id,
+                email: account.email,
+            },
+            {
+                attempts: 3,
+                backoff: {
+                    type: 'exponential',
+                    delay: 5000,
+                },
+            },
+        );
+
+        this.logger.log(`Initial sync job queued for account ${account.id}`);
+
+        return new EmailAccountResponseDto(account);
+    }
+
+    /**
      * Get all email accounts for a user
      */
     async findAll(userId: string): Promise<EmailAccountResponseDto[]> {

@@ -15,7 +15,7 @@ export class EmailAccountResponseDto {
     provider: string;
 
     @Exclude()
-    password: string;
+    password: string | null;
 
     @ApiProperty({ nullable: true })
     lastFetchedUid: number | null;

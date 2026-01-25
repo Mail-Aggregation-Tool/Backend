@@ -41,6 +41,9 @@ export class SyncService {
         if (!encryptionKey) {
             throw new Error('ENCRYPTION_KEY not configured');
         }
+        if (!account.password) {
+            throw new Error(`Account ${accountId} uses OAuth and cannot be synced via IMAP with password`);
+        }
         const password = EncryptionUtil.decrypt(account.password, encryptionKey);
 
         // Get IMAP config
@@ -108,6 +111,9 @@ export class SyncService {
         const encryptionKey = this.configService.get<string>('ENCRYPTION_KEY');
         if (!encryptionKey) {
             throw new Error('ENCRYPTION_KEY not configured');
+        }
+        if (!account.password) {
+            throw new Error(`Account ${accountId} uses OAuth and cannot be synced via IMAP with password`);
         }
         const password = EncryptionUtil.decrypt(account.password, encryptionKey);
 

@@ -9,20 +9,25 @@ generator client {
 model User {
   id            String         @id @default(uuid())
   email         String         @unique
-  password      String
+  password      String?        // Made optional for OAuth users
+  name          String?        // Added for OAuth profile
+  oauthProvider String?
+  oauthId       String?        @unique
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
   emailAccounts EmailAccount[]
 }
 
 model EmailAccount {
-  id       String @id @default(uuid())
-  userId   String
-  user     User   @relation(fields: [userId], references: [id])
-  email    String
-  provider String // e.g., "outlook", "gmail"
-  password String // Encrypted IMAP/App Password
-
+  id           String    @id @default(uuid())
+  userId       String
+  user         User      @relation(fields: [userId], references: [id])
+  email        String
+  provider     String    // e.g., "outlook", "gmail"
+  password     String?   // Encrypted IMAP/App Password (optional for OAuth)
+  accessToken  String?   // For OAuth
+  refreshToken String?   // For OAuth
+  
   // Sync state
   lastFetchedUid Int? // Track last UID to prevent duplicate fetching
   lastSyncedAt   DateTime?
