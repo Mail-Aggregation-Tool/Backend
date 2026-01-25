@@ -171,7 +171,6 @@ export class AuthController {
     })
     @ApiExcludeEndpoint(false)
     async microsoftAuthRedirect(@Req() req, @Res() res) {
-        console.log('Microsoft OAuth user object:', req.user);
         const authResult = await this.authService.microsoftAuth(req.user);
         const frontendUrl = process.env.CLIENT_URL || 'http://localhost:3000';
         return res.redirect(`${frontendUrl}/auth/microsoft/callback?token=${authResult.token}&user=${encodeURIComponent(JSON.stringify(authResult.user))}`);

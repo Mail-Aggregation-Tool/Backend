@@ -51,7 +51,10 @@ export class EmailsRepository {
      */
     async findById(id: string): Promise<EmailWithAttachments | null> {
         return this.prisma.email.findUnique({
-            where: { id },
+            where: {
+                id,
+                deletedAt: null, // Exclude soft-deleted emails
+            },
             include: {
                 attachments: true,
             },
@@ -74,6 +77,7 @@ export class EmailsRepository {
             account: {
                 userId,
             },
+            deletedAt: null, // Exclude soft-deleted emails
             ...(filters.accountId && { accountId: filters.accountId }),
             ...(filters.folder && { folder: filters.folder }),
             ...(filters.isRead !== undefined && { isRead: filters.isRead }),
@@ -119,7 +123,7 @@ export class EmailsRepository {
     }
 
     /**
-     * Check if email exists by UID and account
+     * Check if email exists by UID and account (including soft-deleted)
      */
     async existsByUidAndAccount(
         uid: number,
@@ -172,6 +176,16 @@ export class EmailsRepository {
             folder: item.folder,
             count: item._count.folder,
         }));
+    }
+
+    /**
+     * Soft delete an email
+     */
+    async softDelete(id: string): Promise<Email> {
+        return this.prisma.email.update({
+            where: { id },
+            data: { deletedAt: new Date() },
+        });
     }
 
     /**

@@ -10,7 +10,7 @@ export class MicrosoftStrategy extends PassportStrategy(Strategy, 'microsoft') {
             clientID: configService.get<string>('MICROSOFT_CLIENT_ID') || 'process.env.MICROSOFT_CLIENT_ID',
             clientSecret: configService.get<string>('MICROSOFT_CLIENT_SECRET') || 'process.env.MICROSOFT_CLIENT_SECRET',
             callbackURL: `${configService.get<string>('API_URL')}/auth/microsoft/callback`,
-            scope: ['user.read', 'email', 'openid', 'profile'],
+            scope: ['user.read', 'email', 'openid', 'profile', 'offline_access'],
         });
     }
 

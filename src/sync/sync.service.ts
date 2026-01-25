@@ -178,6 +178,20 @@ export class SyncService {
 
                     for (const message of messages) {
                         try {
+                            // Check if email exists and is soft-deleted
+                            const exists = await this.emailsRepository.existsByUidAndAccount(
+                                message.uid,
+                                accountId,
+                            );
+
+                            if (exists) {
+                                // Email exists (possibly soft-deleted), skip to prevent re-creation
+                                this.logger.debug(
+                                    `Skipping UID ${message.uid} - already exists (may be soft-deleted)`,
+                                );
+                                continue;
+                            }
+
                             const parsed = await EmailParserUtil.parseEmail(
                                 message.source,
                                 message.flags,

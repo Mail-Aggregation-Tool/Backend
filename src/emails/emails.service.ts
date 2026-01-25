@@ -79,6 +79,17 @@ export class EmailsService {
     }
 
     /**
+     * Soft delete an email
+     */
+    async remove(userId: string, id: string): Promise<void> {
+        // First verify email exists and belongs to user
+        await this.findOne(userId, id);
+
+        // Soft delete the email
+        await this.emailsRepository.softDelete(id);
+    }
+
+    /**
      * Get folder statistics for user's accounts
      */
     async getFolderStats(accountId: string) {

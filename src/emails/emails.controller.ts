@@ -3,9 +3,12 @@ import {
     Get,
     Param,
     Patch,
+    Delete,
     Body,
     Query,
     UseGuards,
+    HttpCode,
+    HttpStatus,
 } from '@nestjs/common';
 import {
     ApiTags,
@@ -194,5 +197,41 @@ export class EmailsController {
         @Body() updateDto: UpdateEmailReadStatusDto,
     ): Promise<EmailResponseDto> {
         return this.emailsService.updateReadStatus(userId, id, updateDto);
+    }
+
+    @Delete(':id')
+    @HttpCode(HttpStatus.NO_CONTENT)
+    @ApiOperation({
+        summary: 'Soft delete an email',
+        description: 'Marks email as deleted without removing it from database. Prevents re-syncing during background jobs. Email will no longer appear in queries.'
+    })
+    @ApiParam({
+        name: 'id',
+        description: 'Email UUID to soft delete',
+        type: 'string',
+        format: 'uuid',
+        example: '550e8400-e29b-41d4-a716-446655440000'
+    })
+    @ApiResponse({
+        status: 204,
+        description: 'Email successfully soft deleted - no content returned'
+    })
+    @ApiResponse({
+        status: 404,
+        description: 'Email not found or does not belong to user\'s accounts',
+        schema: {
+            type: 'object',
+            properties: {
+                statusCode: { type: 'number', example: 404 },
+                message: { type: 'string', example: 'Email not found' },
+                error: { type: 'string', example: 'Not Found' }
+            }
+        }
+    })
+    async remove(
+        @GetUser('id') userId: string,
+        @Param('id') id: string,
+    ): Promise<void> {
+        return this.emailsService.remove(userId, id);
     }
 }
