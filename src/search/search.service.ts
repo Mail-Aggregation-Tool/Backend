@@ -14,56 +14,64 @@ export class SearchService {
      * @param page - Page number
      * @param limit - Items per page
      */
-    async searchEmails(
-        userId: string,
-        query: string,
-        page: number = 1,
-        limit: number = 20,
-    ) {
-        const skip = (page - 1) * limit;
+   async searchEmails(
+  userId: string,
+  query: string,
+  page: number = 1,
+  limit: number = 20,
+) {
+  const skip = (page - 1) * limit;
 
-        // Use Postgres full-text search on subject and body
-        // This uses the @@ operator for text search
-        const searchQuery = `%${query}%`;
+  // Guard against empty / whitespace-only queries
+  if (!query?.trim()) {
+    return {
+      data: [],
+      total: 0,
+      page,
+      limit,
+      totalPages: 0,
+    };
+  }
 
-        const [emails, total] = await Promise.all([
-            this.prisma.$queryRaw`
-        SELECT e.*
-        FROM "Email" e
-        INNER JOIN "EmailAccount" ea ON e."accountId" = ea.id
-        WHERE ea."userId" = ${userId}
-        AND (
-          e.subject ILIKE ${searchQuery}
-          OR e.body ILIKE ${searchQuery}
-          OR e."from" ILIKE ${searchQuery}
-        )
-        ORDER BY e."receivedAt" DESC
-        LIMIT ${limit}
-        OFFSET ${skip}
-      `,
-            this.prisma.$queryRaw<[{ count: bigint }]>`
-        SELECT COUNT(*)::int as count
-        FROM "Email" e
-        INNER JOIN "EmailAccount" ea ON e."accountId" = ea.id
-        WHERE ea."userId" = ${userId}
-        AND (
-          e.subject ILIKE ${searchQuery}
-          OR e.body ILIKE ${searchQuery}
-          OR e."from" ILIKE ${searchQuery}
-        )
-      `,
-        ]);
+  const [emails, total] = await Promise.all([
+    this.prisma.$queryRaw`
+      SELECT e.*
+      FROM "Email" e
+      INNER JOIN email_fts fts ON fts.email_id = e.id
+      INNER JOIN "EmailAccount" ea ON e."accountId" = ea.id
+      WHERE
+        ea."userId" = ${userId}
+        AND e."deletedAt" IS NULL
+        AND fts.search_vector @@ plainto_tsquery('english', ${query})
+      ORDER BY
+        ts_rank(fts.search_vector, plainto_tsquery('english', ${query})) DESC,
+        e."receivedAt" DESC
+      LIMIT ${limit}
+      OFFSET ${skip}
+    `,
+    this.prisma.$queryRaw<[{ count: bigint }]>`
+      SELECT COUNT(*)::bigint AS count
+      FROM "Email" e
+      INNER JOIN email_fts fts ON fts.email_id = e.id
+      INNER JOIN "EmailAccount" ea ON e."accountId" = ea.id
+      WHERE
+        ea."userId" = ${userId}
+        AND e."deletedAt" IS NULL
+        AND fts.search_vector @@ plainto_tsquery('english', ${query})
+    `,
+  ]);
 
-        const count = Number(total[0]?.count || 0);
+  const count = Number(total[0]?.count ?? 0);
 
-        return {
-            data: emails,
-            total: count,
-            page,
-            limit,
-            totalPages: Math.ceil(count / limit),
-        };
-    }
+  return {
+    data: emails,
+    total: count,
+    page,
+    limit,
+    totalPages: Math.ceil(count / limit),
+  };
+}
+
 
     /**
      * Search emails by sender

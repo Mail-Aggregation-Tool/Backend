@@ -229,6 +229,6 @@ export class AuthController {
         // Ideally we would pass state to link different emails.
         const token = await this.authService.connectOutlook(req.user);
         const frontendUrl = process.env.CLIENT_URL || 'http://localhost:3000';
-        return res.redirect(`${frontendUrl}/newsletter-generator?token=${token}`);
+        return res.redirect(`${frontendUrl}/auth/microsoft/outlook/callback?token=${token}`);
     }
 }

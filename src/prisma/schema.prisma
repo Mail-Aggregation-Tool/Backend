@@ -80,3 +80,11 @@ model Attachment {
 
   createdAt DateTime @default(now())
 }
+
+model EmailFts {
+  email_id     String
+  search_vector Unsupported("tsvector")
+
+  @@map("email_fts")
+  @@ignore
+}

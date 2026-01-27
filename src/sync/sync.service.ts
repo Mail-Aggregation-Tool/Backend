@@ -155,28 +155,30 @@ export class SyncService {
                 };
             }
 
-            // Fetch emails in chunks
+            // Fetch emails in chunks (newest first)
             let totalSynced = 0;
-            let currentUid = startUid;
+            let currentUid = highestUid;
 
-            while (currentUid <= highestUid) {
-                const endUid = Math.min(currentUid + chunkSize - 1, highestUid);
+            while (currentUid >= startUid) {
+                // inclusive start of chunk
+                const chunkStartUid = Math.max(currentUid - chunkSize + 1, startUid);
 
                 this.logger.log(
-                    `Fetching emails ${currentUid} to ${endUid} from ${folder}`,
+                    `Fetching emails ${chunkStartUid} to ${currentUid} from ${folder}`,
                 );
 
                 const messages = await client.fetchEmailsByUid(
                     folder,
+                    chunkStartUid,
                     currentUid,
-                    endUid,
                 );
 
                 if (messages.length > 0) {
                     // Parse and store emails
                     const emailsToCreate: Prisma.EmailCreateManyInput[] = [];
 
-                    for (const message of messages) {
+                   
+                    for (const message of messages.reverse()) {
                         try {
                             // Check if email exists and is soft-deleted
                             const exists = await this.emailsRepository.existsByUidAndAccount(
@@ -237,7 +239,7 @@ export class SyncService {
                     }
                 }
 
-                currentUid = endUid + 1;
+                currentUid = chunkStartUid - 1;
             }
 
             // Update account sync state

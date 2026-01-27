@@ -65,9 +65,9 @@ export class ImapClientUtil {
                 auth: this.config.auth,
                 connectionTimeout: IMAP_SETTINGS.TIMEOUT,
                 greetingTimeout: IMAP_SETTINGS.TIMEOUT,
-                tls:{
-                    host:this.config.host,
-                    rejectUnauthorized: this.config.secure,
+                logger: false,
+                tls: {
+                    host: this.config.host,
                 }
             };
 
