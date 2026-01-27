@@ -11,12 +11,9 @@ export class MicrosoftOutlookStrategy extends PassportStrategy(Strategy, 'micros
             clientSecret: configService.get<string>('MICROSOFT_CLIENT_SECRET') || 'process.env.MICROSOFT_CLIENT_SECRET',
             callbackURL: `${configService.get<string>('API_URL')}/auth/microsoft/outlook/callback`,
             scope: [
-                'openid',
-                'profile',
                 'email',
                 'offline_access',
                 'https://outlook.office.com/IMAP.AccessAsUser.All',
-                'https://outlook.office.com/SMTP.Send',
             ],
         });
     }

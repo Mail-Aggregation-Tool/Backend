@@ -131,6 +131,9 @@ export class SyncService {
         try {
             await client.connect();
 
+            // Get folder metadata for normalization
+            const folderMetadata = await client.getFolderMetadata(folder);
+
             // Get the last synced UID for this folder
             const lastUid = await this.emailsRepository.getHighestUid(
                 accountId,
@@ -177,7 +180,7 @@ export class SyncService {
                     // Parse and store emails
                     const emailsToCreate: Prisma.EmailCreateManyInput[] = [];
 
-                   
+
                     for (const message of messages.reverse()) {
                         try {
                             // Check if email exists and is soft-deleted
@@ -205,6 +208,8 @@ export class SyncService {
                             const normalizedFolder = FolderNormalizerUtil.normalizeFolderName(
                                 folder,
                                 provider,
+                                folderMetadata.specialUse,
+                                folderMetadata.flags,
                             );
 
                             emailsToCreate.push({

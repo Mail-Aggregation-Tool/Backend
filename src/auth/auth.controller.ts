@@ -216,7 +216,7 @@ export class AuthController {
             properties: {
                 redirectUrl: {
                     type: 'string',
-                    example: 'http://localhost:3000/newsletter-generator?token=eyJhbGci...',
+                    example: 'http://localhost:3000/auth/microsoft/outlook/callback?token=eyJhbGci...',
                     description: 'Frontend URL with the connected email account information'
                 }
             }

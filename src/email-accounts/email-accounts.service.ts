@@ -123,6 +123,24 @@ export class EmailAccountsService {
                     accessToken,
                     refreshToken,
                 });
+
+                // Trigger sync for existing account (Token refresh/Update)
+                await this.initialSyncQueue.add(
+                    JOB_TYPES.SYNC_ACCOUNT,
+                    {
+                        accountId: account.id,
+                        email: account.email,
+                    },
+                    {
+                        attempts: 3,
+                        backoff: {
+                            type: 'exponential',
+                            delay: 5000,
+                        },
+                    },
+                );
+                this.logger.log(`Sync job queued for existing account ${account.id} (Token refresh)`);
+
                 return new EmailAccountResponseDto(account);
             }
         }

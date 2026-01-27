@@ -82,7 +82,7 @@ model Attachment {
 }
 
 model EmailFts {
-  email_id     String
+  email_id      String
   search_vector Unsupported("tsvector")
 
   @@map("email_fts")

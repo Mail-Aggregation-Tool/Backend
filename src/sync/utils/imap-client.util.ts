@@ -229,6 +229,32 @@ export class ImapClientUtil {
     }
 
     /**
+     * Get folder metadata (flags, specialUse)
+     */
+    async getFolderMetadata(folder: string): Promise<{ flags: Set<string>; specialUse?: string }> {
+        await this.ensureConnection();
+
+        try {
+            const lock = await this.client!.getMailboxLock(folder);
+            try {
+                // When lock is acquired, the mailbox is selected and information is available in this.client.mailbox
+                if (this.client && this.client.mailbox) {
+                    return {
+                        flags: this.client.mailbox.flags,
+                        specialUse: this.client.mailbox.specialUse,
+                    };
+                }
+                return { flags: new Set() };
+            } finally {
+                lock.release();
+            }
+        } catch (error) {
+            this.logger.warn(`Failed to get folder metadata for ${folder}: ${error.message}`);
+            return { flags: new Set() };
+        }
+    }
+
+    /**
      * Test connection (used for validation)
      */
     static async testConnection(

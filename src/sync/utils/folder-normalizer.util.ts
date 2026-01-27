@@ -13,10 +13,35 @@ export class FolderNormalizerUtil {
     static normalizeFolderName(
         folderPath: string,
         provider: string | null,
+        specialUse?: string,
+        flags?: Set<string>,
     ): string {
         // If INBOX, always return as-is (standard across all providers)
         if (folderPath.toUpperCase() === 'INBOX') {
             return STANDARD_FOLDERS.INBOX;
+        }
+
+        // Check specialUse attribute first (RFC 6154)
+        if (specialUse) {
+            const use = specialUse.replace(/^\\/, '').toLowerCase();
+            switch (use) {
+                case 'inbox': return STANDARD_FOLDERS.INBOX; // Should be handled above but for completeness
+                case 'sent': return STANDARD_FOLDERS.SENT;
+                case 'drafts': return STANDARD_FOLDERS.DRAFTS;
+                case 'trash': return STANDARD_FOLDERS.TRASH;
+                case 'junk':
+                case 'spam': return STANDARD_FOLDERS.SPAM;
+                case 'archive': return STANDARD_FOLDERS.ARCHIVE;
+            }
+        }
+
+        // Check flags if specialUse not available
+        if (flags) {
+            if (flags.has('\\Sent') || flags.has('\\SentMail')) return STANDARD_FOLDERS.SENT;
+            if (flags.has('\\Drafts')) return STANDARD_FOLDERS.DRAFTS;
+            if (flags.has('\\Trash')) return STANDARD_FOLDERS.TRASH;
+            if (flags.has('\\Junk') || flags.has('\\Spam')) return STANDARD_FOLDERS.SPAM;
+            if (flags.has('\\Archive')) return STANDARD_FOLDERS.ARCHIVE;
         }
 
         // Check provider-specific mappings

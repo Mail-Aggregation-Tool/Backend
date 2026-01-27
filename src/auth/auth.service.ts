@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException, ConflictException, Inject, forwardRef, NotFoundException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, ConflictException, Inject, forwardRef, NotFoundException, BadRequestException } from '@nestjs/common';
 
 import { JwtService } from '@nestjs/jwt';
 import { AuthRepository } from './auth.repository';
@@ -100,21 +100,36 @@ export class AuthService {
     }
 
     async connectOutlook(oauthUser: any) {
-        const { email, accessToken, refreshToken } = oauthUser;
+        const { email, name, oauthId, accessToken, refreshToken } = oauthUser;
 
-        const user = await this.authRepository.findUserByEmail(email);
-        if (!user) {
-            throw new NotFoundException('User not found. Please sign up first.');
+        if (!email) {
+            throw new BadRequestException('Email not provided by OAuth provider');
         }
 
-        // Link the email account
-        const account = await this.emailAccountsService.createWithOAuth(
+        let user = await this.authRepository.findUserByEmail(email);
+        if (!user) {
+            // User must exist to connect an email account
+            throw new NotFoundException('You cannot connect an email account to a user that doesn\'t exist');
+        } else {
+            // Update OAuth ID if not present
+            if (!user.oauthId && oauthId) {
+                user = await this.authRepository.update(user.id, {
+                    oauthId,
+                    oauthProvider: 'microsoft',
+                });
+            }
+        }
+
+        // Link the email account (creates or updates, and triggers initial sync)
+        await this.emailAccountsService.createWithOAuth(
             user.id,
             email,
             accessToken,
             refreshToken
         );
 
-        return account;
+        // Generate JWT token for user login
+        const token = this.generateToken(user.id, user.email);
+        return token;
     }
 }
