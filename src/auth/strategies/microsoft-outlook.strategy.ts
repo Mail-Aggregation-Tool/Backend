@@ -16,7 +16,7 @@ export class MicrosoftOutlookStrategy extends PassportStrategy(Strategy, 'micros
                 'openid',
                 'email',
                 'offline_access',
-                'https://outlook.office.com/IMAP.AccessAsUser.All',
+                'IMAP.AccessAsUser.All',
             ],
         });
     }
