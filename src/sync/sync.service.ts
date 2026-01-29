@@ -155,10 +155,10 @@ export class SyncService {
                 `Last UID for ${folder} (normalized: ${normalizedFolder}): ${lastUid}, starting from ${startUid}`,
             );
 
-            // Get highest UID in folder
-            const highestUid = await client.getHighestUid(folder);
+            // Search for existing UIDs >= startUid (handles sparse UIDs in Trash/Spam)
+            const existingUids = await client.searchUidsFromStart(folder, startUid);
 
-            if (highestUid < startUid) {
+            if (existingUids.length === 0) {
                 this.logger.log(`No new emails in ${folder}`);
                 return {
                     accountId,
@@ -168,26 +168,29 @@ export class SyncService {
                 };
             }
 
-            // Fetch emails in chunks (newest first)
+            // Process UIDs in chunks (newest first)
             let totalSynced = 0;
-            let currentUid = highestUid;
+            const sortedUids = existingUids.sort((a, b) => b - a); // Descending order
+            const highestUid = sortedUids[0];
 
-            while (currentUid >= startUid) {
-                // inclusive start of chunk
-                const chunkStartUid = Math.max(currentUid - chunkSize + 1, startUid);
+            for (let i = 0; i < sortedUids.length; i += chunkSize) {
+                const chunkUids = sortedUids.slice(i, i + chunkSize);
+                const chunkStart = Math.min(...chunkUids);
+                const chunkEnd = Math.max(...chunkUids);
 
                 this.logger.log(
-                    `Fetching emails ${chunkStartUid} to ${currentUid} from ${folder}`,
+                    `Fetching ${chunkUids.length} emails (UIDs ${chunkStart}-${chunkEnd}) from ${folder}`,
                 );
 
+                // Fetch specific UIDs using UID range (they exist, so this will work)
                 const messages = await client.fetchEmailsByUid(
                     folder,
-                    chunkStartUid,
-                    currentUid,
+                    chunkStart,
+                    chunkEnd,
                 );
 
                 this.logger.log(
-                    `[DEBUG] Fetched ${messages.length} messages from ${folder} (UIDs ${chunkStartUid}-${currentUid})`,
+                    `[DEBUG] Fetched ${messages.length} messages from ${folder} (UIDs ${chunkStart}-${chunkEnd})`,
                 );
 
                 if (messages.length > 0) {
@@ -256,8 +259,6 @@ export class SyncService {
                         this.logger.log(`Stored ${count} emails from ${folder} (expected ${emailsToCreate.length})`);
                     }
                 }
-
-                currentUid = chunkStartUid - 1;
             }
 
             // Update account sync state

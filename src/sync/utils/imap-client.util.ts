@@ -229,6 +229,51 @@ export class ImapClientUtil {
     }
 
     /**
+     * Search for all existing UIDs in a folder starting from a given UID
+     * This handles sparse UIDs (gaps caused by permanently deleted emails)
+     * @param folder - Folder path
+     * @param startUid - Starting UID to search from (inclusive)
+     * @returns Array of existing UIDs in ascending order
+     */
+    async searchUidsFromStart(folder: string, startUid: number): Promise<number[]> {
+        await this.ensureConnection();
+
+        try {
+            const lock = await this.client!.getMailboxLock(folder);
+
+            try {
+                // Search for all messages with UID >= startUid
+                const searchResult = await this.client!.search(
+                    { uid: `${startUid}:*` },
+                    { uid: true },
+                );
+
+                // Handle case where search returns false (no results) or an array
+                if (!searchResult || !Array.isArray(searchResult) || searchResult.length === 0) {
+                    this.logger.log(`No UIDs found in ${folder} starting from UID ${startUid}`);
+                    return [];
+                }
+
+                // Filter out any UIDs less than startUid (edge case with UID:* search)
+                const filteredUids = searchResult.filter(uid => uid >= startUid);
+
+                this.logger.log(
+                    `Found ${filteredUids.length} existing UIDs in ${folder} starting from UID ${startUid}`,
+                );
+
+                return filteredUids.sort((a, b) => a - b);
+            } finally {
+                lock.release();
+            }
+        } catch (error) {
+            this.logger.error(
+                `Failed to search UIDs in ${folder}: ${error.message}`,
+            );
+            return [];
+        }
+    }
+
+    /**
      * Get folder metadata (flags, specialUse)
      */
     async getFolderMetadata(folder: string): Promise<{ flags: Set<string>; specialUse?: string }> {
