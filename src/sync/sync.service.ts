@@ -134,15 +134,25 @@ export class SyncService {
             // Get folder metadata for normalization
             const folderMetadata = await client.getFolderMetadata(folder);
 
-            // Get the last synced UID for this folder
+            // Normalize folder name BEFORE querying for highest UID
+            // This ensures we query with the same folder name that emails are stored with
+            const provider = detectProvider(account.email);
+            const normalizedFolder = FolderNormalizerUtil.normalizeFolderName(
+                folder,
+                provider,
+                folderMetadata.specialUse,
+                folderMetadata.flags,
+            );
+
+            // Get the last synced UID for this folder (using normalized folder name)
             const lastUid = await this.emailsRepository.getHighestUid(
                 accountId,
-                folder,
+                normalizedFolder,
             );
             const startUid = lastUid + 1;
 
             this.logger.log(
-                `Last UID for ${folder}: ${lastUid}, starting from ${startUid}`,
+                `Last UID for ${folder} (normalized: ${normalizedFolder}): ${lastUid}, starting from ${startUid}`,
             );
 
             // Get highest UID in folder
@@ -179,16 +189,6 @@ export class SyncService {
                 if (messages.length > 0) {
                     // Parse and store emails
                     const emailsToCreate: Prisma.EmailCreateManyInput[] = [];
-
-
-                    // Normalize folder name
-                    const provider = detectProvider(account.email);
-                    const normalizedFolder = FolderNormalizerUtil.normalizeFolderName(
-                        folder,
-                        provider,
-                        folderMetadata.specialUse,
-                        folderMetadata.flags,
-                    );
 
                     for (const message of messages.reverse()) {
                         try {
