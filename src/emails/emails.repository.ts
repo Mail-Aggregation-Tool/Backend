@@ -127,13 +127,11 @@ export class EmailsRepository {
      */
     async existsByUidAndAccount(
         uid: number,
-        folder: string,
         accountId: string,
     ): Promise<boolean> {
         const count = await this.prisma.email.count({
             where: {
                 uid,
-                folder,
                 accountId,
             },
         });

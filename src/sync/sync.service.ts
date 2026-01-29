@@ -195,7 +195,6 @@ export class SyncService {
                             // Check if email exists and is soft-deleted
                             const exists = await this.emailsRepository.existsByUidAndAccount(
                                 message.uid,
-                                normalizedFolder,
                                 accountId,
                             );
 
