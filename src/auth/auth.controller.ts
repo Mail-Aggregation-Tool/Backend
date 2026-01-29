@@ -225,6 +225,19 @@ export class AuthController {
     @ApiExcludeEndpoint(false)
     async microsoftAuthRedirect(@Req() req, @Res() res) {
         const authResult = await this.authService.microsoftAuth(req.user);
+
+        // Generate refresh token
+        const refreshToken = await this.authService.generateRefreshToken(authResult.user.id);
+
+        // Set refresh token cookie
+        res.cookie('refresh_token', refreshToken, {
+            httpOnly: true,
+            secure: true,
+            sameSite: 'strict',
+            path: '/auth/refresh',
+            expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
+        });
+
         const frontendUrl = process.env.CLIENT_URL || 'http://localhost:3000';
         return res.redirect(`${frontendUrl}/auth/microsoft/callback?token=${authResult.token}&user=${encodeURIComponent(JSON.stringify(authResult.user))}`);
     }
