@@ -16,6 +16,7 @@ model User {
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
   emailAccounts EmailAccount[]
+  refreshTokens RefreshToken[]
 }
 
 model EmailAccount {
@@ -87,4 +88,17 @@ model EmailFts {
 
   @@map("email_fts")
   @@ignore
+}
+
+model RefreshToken {
+  id         String   @id @default(uuid())
+  tokenHash  String
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  replacedBy String? // For rotation tracking
+  isRevoked  Boolean  @default(false)
+
+  @@index([userId])
 }

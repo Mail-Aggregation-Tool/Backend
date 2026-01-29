@@ -82,6 +82,10 @@ export class FolderNormalizerUtil {
             return STANDARD_FOLDERS.ARCHIVE;
         }
 
+        if (lowerPath.includes('important')) {
+            return STANDARD_FOLDERS.IMPORTANT;
+        }
+
         // Return original if no mapping found
         return folderPath;
     }
@@ -118,6 +122,7 @@ export class FolderNormalizerUtil {
         if (normalized === 'INBOX') return 100;
         if (normalized.includes('SENT')) return 90;
         if (normalized.includes('DRAFT')) return 80;
+        if (normalized.includes('IMPORTANT')) return 75;
         if (normalized.includes('ARCHIVE')) return 70;
         if (normalized.includes('SPAM') || normalized.includes('JUNK')) return 50;
         if (normalized.includes('TRASH') || normalized.includes('DELETED'))

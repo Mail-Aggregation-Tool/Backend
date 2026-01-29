@@ -29,4 +29,36 @@ export class AuthRepository {
             data,
         });
     }
+
+    async createRefreshToken(data: any): Promise<any> {
+        return this.prisma.refreshToken.create({
+            data,
+        });
+    }
+
+    async findRefreshTokenById(id: string): Promise<any> {
+        return this.prisma.refreshToken.findUnique({
+            where: { id },
+            include: { user: true },
+        });
+    }
+
+    async revokeRefreshToken(id: string): Promise<any> {
+        return this.prisma.refreshToken.update({
+            where: { id },
+            data: { isRevoked: true },
+        });
+    }
+
+    async rotateRefreshToken(oldTokenId: string, newTokenId: string): Promise<any> {
+        return this.prisma.$transaction([
+            this.prisma.refreshToken.update({
+                where: { id: oldTokenId },
+                data: {
+                    isRevoked: true,
+                    replacedBy: newTokenId
+                },
+            }),
+        ]);
+    }
 }

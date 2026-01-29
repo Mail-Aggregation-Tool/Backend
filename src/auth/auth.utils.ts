@@ -14,7 +14,7 @@ export class AuthUtils {
         }
     }
 
-    static sanitizeUser(user: User): Partial<User> {
+    static sanitizeUser(user: User): Omit<User, 'password'> {
         const { password, ...sanitized } = user;
         return sanitized;
     }
@@ -27,6 +27,16 @@ export class AuthUtils {
         const expiry = new Date();
         expiry.setMinutes(expiry.getMinutes() + 10); // 10 minutes from now
         return expiry;
+    }
+
+    static generateRandomToken(): string {
+        const Crypto = require('crypto');
+        return Crypto.randomBytes(32).toString('hex');
+    }
+
+    static generateUuid(): string {
+        const { v4: uuidv4 } = require('uuid');
+        return uuidv4();
     }
 
 }

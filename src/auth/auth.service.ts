@@ -20,6 +20,79 @@ export class AuthService {
         return this.jwtService.sign({ id: userId, email });
     }
 
+    async generateRefreshToken(userId: string): Promise<string> {
+        // Generate a random token secret
+        const refreshTokenSecret = AuthUtils.generateRandomToken(); // Need to add this util
+        const tokenId = AuthUtils.generateUuid(); // Need to add this util
+
+        // Hash the secret
+        const tokenHash = await AuthUtils.hashPassword(refreshTokenSecret);
+
+        // Store in DB
+        const expirationDate = new Date();
+        expirationDate.setDate(expirationDate.getDate() + 30); // 30 days expiry
+
+        await this.authRepository.createRefreshToken({
+            id: tokenId,
+            userId,
+            tokenHash,
+            expiresAt: expirationDate
+        });
+
+        // Return the combined token
+        return `${tokenId}:${refreshTokenSecret}`;
+    }
+
+    async rotateRefreshToken(refreshToken: string): Promise<{ token: string; refreshToken: string; user: any }> {
+        const [tokenId, tokenSecret] = refreshToken.split(':');
+
+        if (!tokenId || !tokenSecret) {
+            throw new UnauthorizedException('Invalid refresh token format');
+        }
+
+        const storedToken = await this.authRepository.findRefreshTokenById(tokenId);
+
+        if (!storedToken) {
+            throw new UnauthorizedException('Invalid refresh token');
+        }
+
+        // Check for reuse detection
+        if (storedToken.isRevoked) {
+            // REUSE DETECTED! Revoke the descendant token family if possible
+            // For now, we just fail. Ideally, we would revoke the `replacedBy` token too.
+            if (storedToken.replacedBy) {
+                await this.authRepository.revokeRefreshToken(storedToken.replacedBy);
+            }
+            throw new UnauthorizedException('Refresh token reused - security alert');
+        }
+
+        // Verify hash
+        const isValid = await AuthUtils.verifyPassword(storedToken.tokenHash, tokenSecret);
+        if (!isValid) {
+            throw new UnauthorizedException('Invalid refresh token');
+        }
+
+        // Check expiration
+        if (storedToken.expiresAt < new Date()) {
+            throw new UnauthorizedException('Refresh token expired');
+        }
+
+        // Revoke the old token and rotate
+        const user = storedToken.user;
+        const newRefreshToken = await this.generateRefreshToken(user.id);
+        const [newTokenId] = newRefreshToken.split(':');
+
+        await this.authRepository.rotateRefreshToken(tokenId, newTokenId);
+
+        const newAccessToken = this.generateToken(user.id, user.email);
+
+        return {
+            token: newAccessToken,
+            refreshToken: newRefreshToken,
+            user: AuthUtils.sanitizeUser(user)
+        };
+    }
+
     async signup(signupDto: SignupDto) {
         const { name, email, password } = signupDto;
 

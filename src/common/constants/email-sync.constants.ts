@@ -46,6 +46,7 @@ export const STANDARD_FOLDERS = {
     TRASH: 'Trash',
     SPAM: 'Spam',
     ARCHIVE: 'Archive',
+    IMPORTANT: 'Important',
 } as const;
 
 // Folder name mappings for different providers
@@ -56,6 +57,7 @@ export const FOLDER_MAPPINGS: Record<string, Record<string, string>> = {
         '[Gmail]/Trash': STANDARD_FOLDERS.TRASH,
         '[Gmail]/Spam': STANDARD_FOLDERS.SPAM,
         '[Gmail]/All Mail': STANDARD_FOLDERS.ARCHIVE,
+        '[Gmail]/Important': STANDARD_FOLDERS.IMPORTANT,
     },
     outlook: {
         'Sent Items': STANDARD_FOLDERS.SENT,

@@ -1,4 +1,4 @@
-import { Controller, Post, Body, HttpCode, HttpStatus, Get, UseGuards, Req, Res } from '@nestjs/common';
+import { Controller, Post, Body, HttpCode, HttpStatus, Get, UseGuards, Req, Res, UnauthorizedException } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { AuthService } from './auth.service';
 import { SignupDto } from './dto/signup.dto';
@@ -77,11 +77,50 @@ export class AuthController {
         return this.authService.signup(signupDto);
     }
 
+    @Get('refresh')
+    @ApiOperation({
+        summary: 'Refresh access token',
+        description: 'Uses http-only cookie with refresh token to rotate credentials and issue new access token'
+    })
+    async refresh(@Req() req, @Res({ passthrough: true }) res) {
+        const refreshToken = req.cookies['refresh_token'];
+        if (!refreshToken) {
+            throw new UnauthorizedException('Refresh token not found');
+        }
+
+        const result = await this.authService.rotateRefreshToken(refreshToken);
+
+        // Set new refresh token cookie
+        res.cookie('refresh_token', result.refreshToken, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'strict',
+            path: '/auth/refresh',
+            expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
+        });
+
+        return {
+            user: result.user,
+            token: result.token
+        };
+    }
+
+    @Post('logout')
+    @HttpCode(HttpStatus.OK)
+    @ApiOperation({
+        summary: 'Logout user',
+        description: 'Logs out the user and clears the http-only "refresh_token" cookie.'
+    })
+    async logout(@Res({ passthrough: true }) res) {
+        res.clearCookie('refresh_token', { path: '/auth/refresh' });
+        return { message: 'Logged out successfully' };
+    }
+
     @Post('login')
     @HttpCode(HttpStatus.OK)
     @ApiOperation({
         summary: 'Login with email and password',
-        description: 'Authenticates user credentials and returns JWT token with user data. OAuth users must use OAuth login endpoints.'
+        description: 'Authenticates user credentials and returns JWT token with user data. OAuth users must use OAuth login endpoints. Also sets a secure HTTP-only "refresh_token" cookie for session management.'
     })
     @ApiBody({
         type: LoginDto,
@@ -130,8 +169,22 @@ export class AuthController {
     @ApiBadRequestResponse({
         description: 'Validation failed - invalid email or password format'
     })
-    async login(@Body() loginDto: LoginDto) {
-        return this.authService.login(loginDto);
+    async login(@Body() loginDto: LoginDto, @Res({ passthrough: true }) res) {
+        const result = await this.authService.login(loginDto);
+
+        // Generate refresh token
+        const refreshToken = await this.authService.generateRefreshToken(result.user.id);
+
+        // Set refresh token cookie
+        res.cookie('refresh_token', refreshToken, {
+            httpOnly: true,
+            secure: true,
+            sameSite: 'strict',
+            path: '/auth/refresh',
+            expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
+        });
+
+        return result;
     }
 
     @Get('microsoft')
