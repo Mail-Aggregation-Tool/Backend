@@ -193,8 +193,9 @@ export class SyncService {
                     for (const message of messages.reverse()) {
                         try {
                             // Check if email exists and is soft-deleted
-                            const exists = await this.emailsRepository.existsByUidAndAccount(
+                            const exists = await this.emailsRepository.existsByUidFolderAndAccount(
                                 message.uid,
+                                normalizedFolder,
                                 accountId,
                             );
 

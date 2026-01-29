@@ -63,6 +63,7 @@ model Email {
   updatedAt  DateTime  @updatedAt
   deletedAt  DateTime? // Soft delete timestamp
 
+  @@unique([accountId, uid, folder])
   @@index([accountId])
   @@index([createdAt])
   @@index([deletedAt])
