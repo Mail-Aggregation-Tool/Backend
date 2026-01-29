@@ -123,15 +123,17 @@ export class EmailsRepository {
     }
 
     /**
-     * Check if email exists by UID and account (including soft-deleted)
+     * Check if email exists by UID, folder and account (including soft-deleted)
      */
     async existsByUidAndAccount(
         uid: number,
+        folder: string,
         accountId: string,
     ): Promise<boolean> {
         const count = await this.prisma.email.count({
             where: {
                 uid,
+                folder,
                 accountId,
             },
         });

@@ -181,11 +181,21 @@ export class SyncService {
                     const emailsToCreate: Prisma.EmailCreateManyInput[] = [];
 
 
+                    // Normalize folder name
+                    const provider = detectProvider(account.email);
+                    const normalizedFolder = FolderNormalizerUtil.normalizeFolderName(
+                        folder,
+                        provider,
+                        folderMetadata.specialUse,
+                        folderMetadata.flags,
+                    );
+
                     for (const message of messages.reverse()) {
                         try {
                             // Check if email exists and is soft-deleted
                             const exists = await this.emailsRepository.existsByUidAndAccount(
                                 message.uid,
+                                normalizedFolder,
                                 accountId,
                             );
 
@@ -201,15 +211,6 @@ export class SyncService {
                                 message.source,
                                 message.flags,
                                 message.uid,
-                            );
-
-                            // Normalize folder name
-                            const provider = detectProvider(account.email);
-                            const normalizedFolder = FolderNormalizerUtil.normalizeFolderName(
-                                folder,
-                                provider,
-                                folderMetadata.specialUse,
-                                folderMetadata.flags,
                             );
 
                             emailsToCreate.push({
