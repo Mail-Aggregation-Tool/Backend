@@ -189,15 +189,9 @@ export class SyncService {
                     chunkEnd,
                 );
 
-                this.logger.log(
-                    `[DEBUG] Fetched ${messages.length} messages from ${folder} (UIDs ${chunkStart}-${chunkEnd})`,
-                );
-
                 if (messages.length > 0) {
                     // Parse and store emails
                     const emailsToCreate: Prisma.EmailCreateManyInput[] = [];
-                    let skippedExisting = 0;
-                    let skippedParseError = 0;
 
                     for (const message of messages.reverse()) {
                         try {
@@ -210,10 +204,6 @@ export class SyncService {
 
                             if (exists) {
                                 // Email exists (possibly soft-deleted), skip to prevent re-creation
-                                skippedExisting++;
-                                this.logger.log(
-                                    `[DEBUG] Skipping UID ${message.uid} in folder "${normalizedFolder}" - already exists`,
-                                );
                                 continue;
                             }
 
@@ -239,16 +229,11 @@ export class SyncService {
 
                             // TODO: Handle attachments - queue attachment upload jobs
                         } catch (error) {
-                            skippedParseError++;
                             this.logger.error(
                                 `Failed to parse email UID ${message.uid}: ${error.message}`,
                             );
                         }
                     }
-
-                    this.logger.log(
-                        `[DEBUG] Chunk summary for ${folder}: fetched=${messages.length}, skippedExisting=${skippedExisting}, skippedParseError=${skippedParseError}, toCreate=${emailsToCreate.length}`,
-                    );
 
                     // Batch insert emails
                     if (emailsToCreate.length > 0) {
@@ -256,7 +241,7 @@ export class SyncService {
                             emailsToCreate,
                         );
                         totalSynced += count;
-                        this.logger.log(`Stored ${count} emails from ${folder} (expected ${emailsToCreate.length})`);
+                        this.logger.log(`Stored ${count} emails from ${folder}`);
                     }
                 }
             }

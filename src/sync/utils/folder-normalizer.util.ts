@@ -42,6 +42,7 @@ export class FolderNormalizerUtil {
             if (flags.has('\\Trash')) return STANDARD_FOLDERS.TRASH;
             if (flags.has('\\Junk') || flags.has('\\Spam')) return STANDARD_FOLDERS.SPAM;
             if (flags.has('\\Archive')) return STANDARD_FOLDERS.ARCHIVE;
+            if (flags.has('\\Flagged') || flags.has('\\Starred')) return STANDARD_FOLDERS.STARRED;
         }
 
         // Check provider-specific mappings
@@ -84,6 +85,10 @@ export class FolderNormalizerUtil {
 
         if (lowerPath.includes('important')) {
             return STANDARD_FOLDERS.IMPORTANT;
+        }
+
+        if (lowerPath.includes('starred') || lowerPath.includes('flagged')) {
+            return STANDARD_FOLDERS.STARRED;
         }
 
         // Return original if no mapping found
