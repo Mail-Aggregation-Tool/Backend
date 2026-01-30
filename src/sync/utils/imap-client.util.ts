@@ -10,7 +10,8 @@ export interface ImapConnectionConfig {
     secure: boolean;
     auth: {
         user: string;
-        pass: string;
+        pass?: string;
+        accessToken?: string;
     };
 }
 
@@ -62,7 +63,11 @@ export class ImapClientUtil {
                 host: this.config.host,
                 port: this.config.port,
                 secure: this.config.secure, // must match port (993 for SSL)
-                auth: this.config.auth,
+                auth: {
+                    user: this.config.auth.user,
+                    pass: this.config.auth.pass,
+                    accessToken: this.config.auth.accessToken,
+                },
                 connectionTimeout: IMAP_SETTINGS.TIMEOUT,
                 greetingTimeout: IMAP_SETTINGS.TIMEOUT,
                 logger: false,

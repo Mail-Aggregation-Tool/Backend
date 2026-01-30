@@ -5,7 +5,8 @@ import { EmailsRepository } from '../emails/emails.repository';
 import { ImapClientUtil } from './utils/imap-client.util';
 import { EmailParserUtil } from './utils/email-parser.util';
 import { FolderNormalizerUtil } from './utils/folder-normalizer.util';
-import { getConfigFromEmail, detectProvider } from '../config/imap-providers.config';
+import { getConfigFromEmail, detectProvider, IMAP_PROVIDERS } from '../config/imap-providers.config';
+import { OAuthTokenUtil } from '../auth/utils/oauth-token.util';
 import { SYNC_SETTINGS } from '../common/constants/email-sync.constants';
 import { Prisma } from '@prisma/client';
 import { EncryptionUtil } from '../common/utils/encryption.util';
@@ -25,6 +26,7 @@ export class SyncService {
         private emailAccountsRepository: EmailAccountsRepository,
         private emailsRepository: EmailsRepository,
         private configService: ConfigService,
+        private oauthTokenUtil: OAuthTokenUtil,
     ) { }
 
     /**
@@ -36,30 +38,74 @@ export class SyncService {
             throw new Error(`Account not found: ${accountId}`);
         }
 
-        // Decrypt password for IMAP authentication
-        const encryptionKey = this.configService.get<string>('ENCRYPTION_KEY');
-        if (!encryptionKey) {
-            throw new Error('ENCRYPTION_KEY not configured');
-        }
-        if (!account.password) {
-            throw new Error(`Account ${accountId} uses OAuth and cannot be synced via IMAP with password`);
-        }
-        const password = EncryptionUtil.decrypt(account.password, encryptionKey);
+        // PRIORITY 1: OAuth (using Refresh Token)
+        let password = '';
+        let accessToken = '';
+        let providerConf = getConfigFromEmail(account.email); // Default to detected provider
+        let provider = detectProvider(account.email); // Default detection
 
-        // Get IMAP config
-        const config = getConfigFromEmail(account.email);
-        if (!config) {
+        if (account.refreshToken) {
+            this.logger.log(`Account ${account.email} has refresh token. Prioritizing OAuth.`);
+
+            try {
+                // FORCE Outlook provider for Microsoft OAuth regardless of email domain
+                providerConf = IMAP_PROVIDERS['outlook'];
+                provider = 'outlook';
+
+                // Refresh token
+                const tokens = await this.oauthTokenUtil.refreshMicrosoftToken(account.refreshToken);
+                accessToken = tokens.accessToken;
+
+                // Update access token (and refresh token if rotated) in DB
+                await this.emailAccountsRepository.update(account.id, {
+                    accessToken: tokens.accessToken,
+                    refreshToken: tokens.refreshToken // in case it was rotated
+                });
+
+                this.logger.log(`Successfully refreshed OAuth token for ${account.email}`);
+            } catch (error) {
+                this.logger.error(`Failed to refresh OAuth token for ${account.email}: ${error.message}`);
+                // If refresh fails, we could fallback to password, BUT if user has OAuth set up,
+                // they likely want to use it. However, to be robust, we can try password if available.
+                if (!account.password) {
+                    throw new Error(`OAuth failed and no backup password available for ${account.email}`);
+                }
+                this.logger.warn(`Falling back to basic auth for ${account.email}`);
+            }
+        }
+
+        // PRIORITY 2: Basic Auth (if no OAuth or OAuth failed)
+        if (!accessToken) {
+            if (!account.password) {
+                throw new Error(`Account ${accountId} uses OAuth and cannot be synced via IMAP with password`);
+            }
+
+            // Decrypt password
+            const encryptionKey = this.configService.get<string>('ENCRYPTION_KEY');
+            if (!encryptionKey) {
+                throw new Error('ENCRYPTION_KEY not configured');
+            }
+            password = EncryptionUtil.decrypt(account.password, encryptionKey);
+
+            // Re-detect config since we might have forced it to outlook above but now falling back
+            if (!providerConf) {
+                providerConf = getConfigFromEmail(account.email);
+            }
+        }
+
+        if (!providerConf) {
             throw new Error(`Unable to get IMAP config for ${account.email}`);
         }
 
         // Create IMAP client
         const client = new ImapClientUtil({
-            host: config.host,
-            port: config.port,
-            secure: config.secure,
+            host: providerConf.host,
+            port: providerConf.port,
+            secure: providerConf.secure,
             auth: {
                 user: account.email,
                 pass: password,
+                accessToken: accessToken,
             },
         }, this.configService);
 
@@ -101,30 +147,73 @@ export class SyncService {
 
         this.logger.log(`Starting sync for ${account.email} - ${folder}`);
 
-        // Get IMAP config
-        const config = getConfigFromEmail(account.email);
-        if (!config) {
+        // PRIORITY 1: OAuth (using Refresh Token)
+        let password = '';
+        let accessToken = '';
+        let providerConf = getConfigFromEmail(account.email); // Default to detected provider
+        let provider = detectProvider(account.email); // Default detection
+
+        if (account.refreshToken) {
+            this.logger.log(`Account ${account.email} has refresh token. Prioritizing OAuth.`);
+
+            try {
+                // FORCE Outlook provider for Microsoft OAuth regardless of email domain
+                providerConf = IMAP_PROVIDERS['outlook'];
+                provider = 'outlook';
+
+                // Refresh token
+                const tokens = await this.oauthTokenUtil.refreshMicrosoftToken(account.refreshToken);
+                accessToken = tokens.accessToken;
+
+                // Update access token (and refresh token if rotated) in DB
+                await this.emailAccountsRepository.update(account.id, {
+                    accessToken: tokens.accessToken,
+                    refreshToken: tokens.refreshToken // in case it was rotated
+                });
+
+                this.logger.log(`Successfully refreshed OAuth token for ${account.email}`);
+            } catch (error) {
+                this.logger.error(`Failed to refresh OAuth token for ${account.email}: ${error.message}`);
+                // Fallback to password (implicit if block below checks accessToken)
+                if (!account.password) {
+                    throw new Error(`OAuth failed and no backup password available for ${account.email}`);
+                }
+                this.logger.warn(`Falling back to basic auth for ${account.email}`);
+            }
+        }
+
+        // PRIORITY 2: Basic Auth (if no OAuth or OAuth failed)
+        if (!accessToken) {
+            if (!account.password) {
+                throw new Error(`Account ${accountId} uses OAuth and cannot be synced via IMAP with password`);
+            }
+
+            // Decrypt password
+            const encryptionKey = this.configService.get<string>('ENCRYPTION_KEY');
+            if (!encryptionKey) {
+                throw new Error('ENCRYPTION_KEY not configured');
+            }
+            password = EncryptionUtil.decrypt(account.password, encryptionKey);
+
+            // Re-detect config since we might have forced it to outlook above but now falling back
+            if (!providerConf) {
+                providerConf = getConfigFromEmail(account.email);
+            }
+        }
+
+        if (!providerConf) {
             throw new Error(`Unable to get IMAP config for ${account.email}`);
         }
 
-        // Decrypt password for IMAP authentication
-        const encryptionKey = this.configService.get<string>('ENCRYPTION_KEY');
-        if (!encryptionKey) {
-            throw new Error('ENCRYPTION_KEY not configured');
-        }
-        if (!account.password) {
-            throw new Error(`Account ${accountId} uses OAuth and cannot be synced via IMAP with password`);
-        }
-        const password = EncryptionUtil.decrypt(account.password, encryptionKey);
-
         // Create IMAP client
         const client = new ImapClientUtil({
-            host: config.host,
-            port: config.port,
-            secure: config.secure,
+            host: providerConf.host,
+            port: providerConf.port,
+            secure: providerConf.secure,
             auth: {
                 user: account.email,
                 pass: password,
+                accessToken: accessToken,
             },
         }, this.configService);
 
@@ -136,10 +225,10 @@ export class SyncService {
 
             // Normalize folder name BEFORE querying for highest UID
             // This ensures we query with the same folder name that emails are stored with
-            const provider = detectProvider(account.email);
+            // Use the determined provider, not just detected from email
             const normalizedFolder = FolderNormalizerUtil.normalizeFolderName(
                 folder,
-                provider,
+                provider || 'unknown',
                 folderMetadata.specialUse,
                 folderMetadata.flags,
             );
