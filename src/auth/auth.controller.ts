@@ -3,6 +3,8 @@ import { AuthGuard } from '@nestjs/passport';
 import { AuthService } from './auth.service';
 import { SignupDto } from './dto/signup.dto';
 import { LoginDto } from './dto/login.dto';
+import { MicrosoftOutlookOauthGuard } from './guards/microsoft-outlook-oauth.guard';
+import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import {
     ApiTags,
     ApiOperation,
@@ -243,7 +245,7 @@ export class AuthController {
     }
 
     @Get('microsoft/outlook')
-    @UseGuards(AuthGuard('microsoft-outlook'))
+    @UseGuards(MicrosoftOutlookOauthGuard)
     @ApiOperation({
         summary: 'Connect Microsoft Outlook email account',
         description: 'Initiates OAuth flow to connect Outlook account for email synchronization. User must be logged in.'
