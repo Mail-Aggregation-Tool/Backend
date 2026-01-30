@@ -11,6 +11,7 @@ import { MicrosoftStrategy } from './strategies/microsoft.strategy';
 import { MicrosoftOutlookStrategy } from './strategies/microsoft-outlook.strategy';
 import { MicrosoftOutlookOauthGuard } from './guards/microsoft-outlook-oauth.guard';
 import { EmailAccountsModule } from '../email-accounts/email-accounts.module';
+import { OAuthTokenUtil } from './utils/oauth-token.util';
 
 @Module({
     imports: [
@@ -30,8 +31,9 @@ import { EmailAccountsModule } from '../email-accounts/email-accounts.module';
         JwtAuthGuard,
         MicrosoftStrategy,
         MicrosoftOutlookStrategy,
-        MicrosoftOutlookOauthGuard
+        MicrosoftOutlookOauthGuard,
+        OAuthTokenUtil
     ],
-    exports: [AuthService, JwtModule, JwtAuthGuard],
+    exports: [AuthService, JwtModule, JwtAuthGuard, OAuthTokenUtil],
 })
 export class AuthModule { }
