@@ -13,6 +13,7 @@ import { CreateEmailAccountDto } from './dto/create-email-account.dto';
 import { UpdateEmailAccountDto } from './dto/update-email-account.dto';
 import { EmailAccountResponseDto } from './dto/email-account-response.dto';
 import { ImapValidatorUtil } from './utils/imap-validator.util';
+
 import { detectProvider } from '../config/imap-providers.config';
 import { QUEUE_NAMES, JOB_TYPES } from '../common/constants/email-sync.constants';
 import { EncryptionUtil } from '../common/utils/encryption.util';

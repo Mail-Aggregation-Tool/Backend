@@ -93,6 +93,27 @@ export class AuthService {
         };
     }
 
+    async getUserFromRefreshToken(refreshToken: string): Promise<any> {
+        const [tokenId, tokenSecret] = refreshToken.split(':');
+
+        if (!tokenId || !tokenSecret) {
+            return null;
+        }
+
+        const storedToken = await this.authRepository.findRefreshTokenById(tokenId);
+
+        if (!storedToken || storedToken.isRevoked || storedToken.expiresAt < new Date()) {
+            return null;
+        }
+
+        const isValid = await AuthUtils.verifyPassword(storedToken.tokenHash, tokenSecret);
+        if (!isValid) {
+            return null;
+        }
+
+        return storedToken.user;
+    }
+
     async signup(signupDto: SignupDto) {
         const { name, email, password } = signupDto;
 
@@ -173,13 +194,24 @@ export class AuthService {
     }
 
     async connectOutlook(oauthUser: any) {
-        const { email, name, oauthId, accessToken, refreshToken } = oauthUser;
+        const { email, name, oauthId, accessToken, refreshToken, stateUserId } = oauthUser;
 
         if (!email) {
             throw new BadRequestException('Email not provided by OAuth provider');
         }
 
-        let user = await this.authRepository.findUserByEmail(email);
+        let user: any = null;
+
+        // 1. Try to identify user by the state parameter (Authenticated session ID)
+        if (stateUserId) {
+            user = await this.authRepository.findUserById(stateUserId);
+        }
+
+        // 2. Fallback to email lookup if state is missing or user not found
+        if (!user) {
+            user = await this.authRepository.findUserByEmail(email);
+        }
+
         if (!user) {
             // User must exist to connect an email account
             throw new NotFoundException('You cannot connect an email account to a user that doesn\'t exist');

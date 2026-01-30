@@ -18,16 +18,18 @@ export class MicrosoftOutlookStrategy extends PassportStrategy(Strategy, 'micros
                 'offline_access',
                 'IMAP.AccessAsUser.All',
             ],
+            passReqToCallback: true,
         });
     }
 
-    async validate(accessToken: string, refreshToken: string, profile: any, done: Function) {
+    async validate(req: any, accessToken: string, refreshToken: string, profile: any, done: Function) {
         const user = {
             accessToken,
             refreshToken,
             email: profile.emails?.[0]?.value,
             name: profile.displayName,
             oauthId: profile.id,
+            stateUserId: req.query?.state, // Capture the user ID from state
         };
         done(null, user);
     }

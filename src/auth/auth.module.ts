@@ -9,6 +9,7 @@ import { PrismaModule } from '../prisma/prisma.module';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { MicrosoftStrategy } from './strategies/microsoft.strategy';
 import { MicrosoftOutlookStrategy } from './strategies/microsoft-outlook.strategy';
+import { MicrosoftOutlookOauthGuard } from './guards/microsoft-outlook-oauth.guard';
 import { EmailAccountsModule } from '../email-accounts/email-accounts.module';
 
 @Module({
@@ -28,7 +29,8 @@ import { EmailAccountsModule } from '../email-accounts/email-accounts.module';
         AuthRepository,
         JwtAuthGuard,
         MicrosoftStrategy,
-        MicrosoftOutlookStrategy
+        MicrosoftOutlookStrategy,
+        MicrosoftOutlookOauthGuard
     ],
     exports: [AuthService, JwtModule, JwtAuthGuard],
 })
