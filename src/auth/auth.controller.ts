@@ -245,7 +245,7 @@ export class AuthController {
     }
 
     @Get('microsoft/outlook')
-    @UseGuards(OutlookConnectGuard)
+    @UseGuards(JwtAuthGuard,OutlookConnectGuard)
     @ApiOperation({
         summary: 'Connect Microsoft Outlook email account',
         description: 'Initiates OAuth flow to connect Outlook account for email synchronization. User must be logged in.'

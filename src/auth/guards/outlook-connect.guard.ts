@@ -12,8 +12,8 @@ export class OutlookConnectGuard extends AuthGuard('microsoft-outlook') {
     async canActivate(context: ExecutionContext): Promise<boolean> {
         const request = context.switchToHttp().getRequest();
 
-        // 1. Ensure user is authenticated properly via JWT before initiating connection
-        // The user must be logged in to connect an account.
+        // 1. Ensure user is authenticated properly
+        // Since JwtAuthGuard runs first, request.user should be populated.
         if (!request.user || !request.user.id) {
             throw new UnauthorizedException('User must be logged in to connect an account');
         }
