@@ -3,9 +3,15 @@ import { PassportStrategy } from '@nestjs/passport';
 import { Strategy } from 'passport-microsoft';
 import { ConfigService } from '@nestjs/config';
 
+import { AuthService } from '../auth.service';
+import { UnauthorizedException } from '@nestjs/common';
+
 @Injectable()
 export class MicrosoftOutlookStrategy extends PassportStrategy(Strategy, 'microsoft-outlook') {
-    constructor(private readonly configService: ConfigService) {
+    constructor(
+        private readonly configService: ConfigService,
+        private readonly authService: AuthService,
+    ) {
         super({
             clientID: configService.get<string>('MICROSOFT_CLIENT_ID') || 'process.env.MICROSOFT_CLIENT_ID',
             clientSecret: configService.get<string>('MICROSOFT_CLIENT_SECRET') || 'process.env.MICROSOFT_CLIENT_SECRET',
@@ -23,13 +29,26 @@ export class MicrosoftOutlookStrategy extends PassportStrategy(Strategy, 'micros
     }
 
     async validate(req: any, accessToken: string, refreshToken: string, profile: any, done: Function) {
+        const state = req.query?.state;
+        let userId: string | null = null;
+
+        if (state) {
+            try {
+                // Verify state and retrieve user ID - this also consumes the state token (single use)
+                userId = await this.authService.verifyOutlookState(state);
+            } catch (error) {
+                // State is invalid or expired
+                return done(new UnauthorizedException('Invalid, expired, or used state parameter'), null);
+            }
+        }
+
         const user = {
             accessToken,
             refreshToken,
             email: profile.emails?.[0]?.value,
             name: profile.displayName,
             oauthId: profile.id,
-            stateUserId: req.query?.state, // Capture the user ID from state
+            stateUserId: userId, // Pass the verified user ID (if any)
         };
         done(null, user);
     }

@@ -5,7 +5,10 @@ import { AuthRepository } from './auth.repository';
 import { AuthUtils } from './auth.utils';
 import { SignupDto } from './dto/signup.dto';
 import { LoginDto } from './dto/login.dto';
-import { EmailAccountsService } from '../email-accounts/email-accounts.service';
+import { EmailAccountsService } from '../email-accounts/email-accounts.service'; // Adjust path if needed
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { Cache } from 'cache-manager';
+import { v4 as uuidv4 } from 'uuid';
 
 @Injectable()
 export class AuthService {
@@ -14,10 +17,31 @@ export class AuthService {
         private jwtService: JwtService,
         @Inject(forwardRef(() => EmailAccountsService))
         private emailAccountsService: EmailAccountsService,
+        @Inject(CACHE_MANAGER) private cacheManager: Cache,
     ) { }
 
     private generateToken(userId: string, email: string): string {
         return this.jwtService.sign({ id: userId, email });
+    }
+
+    async generateOutlookState(userId: string): Promise<string> {
+        const state = uuidv4();
+        // Store in cache for 10 minutes (600000 ms)
+        await this.cacheManager.set(`outlook_state:${state}`, userId, 600000);
+        return state;
+    }
+
+    async verifyOutlookState(state: string): Promise<string> {
+        const key = `outlook_state:${state}`;
+        const userId = await this.cacheManager.get<string>(key);
+
+        if (!userId) {
+            throw new UnauthorizedException('Invalid or expired state parameter');
+        }
+
+        // State should be single-use
+        await this.cacheManager.del(key);
+        return userId;
     }
 
     async generateRefreshToken(userId: string): Promise<string> {

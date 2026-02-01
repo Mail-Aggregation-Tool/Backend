@@ -3,7 +3,7 @@ import { AuthGuard } from '@nestjs/passport';
 import { AuthService } from './auth.service';
 import { SignupDto } from './dto/signup.dto';
 import { LoginDto } from './dto/login.dto';
-import { MicrosoftOutlookOauthGuard } from './guards/microsoft-outlook-oauth.guard';
+import { OutlookConnectGuard } from './guards/outlook-connect.guard';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import {
     ApiTags,
@@ -97,7 +97,7 @@ export class AuthController {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
             sameSite: 'strict',
-            path: '/auth',
+            path: '/auth/refresh',
             expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
         });
 
@@ -114,7 +114,7 @@ export class AuthController {
         description: 'Logs out the user and clears the http-only "refresh_token" cookie.'
     })
     async logout(@Res({ passthrough: true }) res) {
-        res.clearCookie('refresh_token', { path: '/auth' });
+        res.clearCookie('refresh_token', { path: '/auth/refresh' });
         return { message: 'Logged out successfully' };
     }
 
@@ -182,7 +182,7 @@ export class AuthController {
             httpOnly: true,
             secure: true,
             sameSite: 'strict',
-            path: '/auth',
+            path: '/auth/refresh',
             expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
         });
 
@@ -236,7 +236,7 @@ export class AuthController {
             httpOnly: true,
             secure: true,
             sameSite: 'strict',
-            path: '/auth',
+            path: '/auth/refresh',
             expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
         });
 
@@ -245,7 +245,7 @@ export class AuthController {
     }
 
     @Get('microsoft/outlook')
-    @UseGuards(MicrosoftOutlookOauthGuard)
+    @UseGuards(OutlookConnectGuard)
     @ApiOperation({
         summary: 'Connect Microsoft Outlook email account',
         description: 'Initiates OAuth flow to connect Outlook account for email synchronization. User must be logged in.'
