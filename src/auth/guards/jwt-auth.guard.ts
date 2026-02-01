@@ -13,11 +13,17 @@ export class JwtAuthGuard implements CanActivate {
         const request = context.switchToHttp().getRequest();
         const authHeader = request.headers['authorization'];
 
-        if (!authHeader) {
+        let token: string;
+
+        if (authHeader) {
+            token = authHeader.split(' ')[1];
+        } else if (request.query && request.query.token) {
+            // Support token in query parameter (e.g. for Outlook auth redirect)
+            token = request.query.token as string;
+        } else {
             throw new UnauthorizedException('Unauthorized: No token provided');
         }
 
-        const token = authHeader.split(' ')[1];
         if (!token) {
             throw new UnauthorizedException('Unauthorized: Invalid token format');
         }
