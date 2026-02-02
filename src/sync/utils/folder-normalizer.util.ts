@@ -25,7 +25,7 @@ export class FolderNormalizerUtil {
         if (specialUse) {
             const use = specialUse.replace(/^\\/, '').toLowerCase();
             switch (use) {
-                case 'inbox': return STANDARD_FOLDERS.INBOX; // Should be handled above but for completeness
+                case 'inbox': return STANDARD_FOLDERS.INBOX;
                 case 'sent': return STANDARD_FOLDERS.SENT;
                 case 'drafts': return STANDARD_FOLDERS.DRAFTS;
                 case 'trash': return STANDARD_FOLDERS.TRASH;
@@ -34,6 +34,17 @@ export class FolderNormalizerUtil {
                 case 'archive': return STANDARD_FOLDERS.ARCHIVE;
             }
         }
+
+        // Graph returns names like 'inbox', 'sentitems', 'deleteditems', 'junkemail', 'archive'
+        const nameLower = folderPath.toLowerCase();
+        if (nameLower === 'inbox') return STANDARD_FOLDERS.INBOX;
+        if (nameLower === 'sentitems' || nameLower === 'sent items') return STANDARD_FOLDERS.SENT;
+        if (nameLower === 'deleteditems' || nameLower === 'deleted items') return STANDARD_FOLDERS.TRASH;
+        if (nameLower === 'junkemail' || nameLower === 'junk email') return STANDARD_FOLDERS.SPAM;
+        if (nameLower === 'archive') return STANDARD_FOLDERS.ARCHIVE;
+        if (nameLower === 'drafts') return STANDARD_FOLDERS.DRAFTS;
+        if (nameLower === 'conversation history') return 'Conversation History';
+        if (nameLower === 'outbox') return 'Outbox';
 
         // Check flags if specialUse not available
         if (flags) {
@@ -110,6 +121,11 @@ export class FolderNormalizerUtil {
             'contacts',
             'calendar',
             'tasks',
+            'journal',
+            'sync issues',
+            'local failures',
+            'server failures',
+            'yammer root'
         ];
 
         return !skipPatterns.some((pattern) => lowerPath.includes(pattern));

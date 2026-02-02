@@ -10,8 +10,7 @@ export interface ImapConnectionConfig {
     secure: boolean;
     auth: {
         user: string;
-        pass?: string;
-        accessToken?: string;
+        pass: string;
     };
 }
 
@@ -59,6 +58,11 @@ export class ImapClientUtil {
                     `Certificate loading failed: ${certError.message}. Proceeding without custom certificates.`,
                 );
             }
+
+            this.logger.log(
+                `Connecting to IMAP - Host: ${this.config.host}:${this.config.port}, User: ${this.config.auth.user}, Secure: ${this.config.secure}`,
+            );
+
             const options: ImapFlowOptions = {
                 host: this.config.host,
                 port: this.config.port,
@@ -66,14 +70,31 @@ export class ImapClientUtil {
                 auth: {
                     user: this.config.auth.user,
                     pass: this.config.auth.pass,
-                    accessToken: this.config.auth.accessToken,
                 },
                 connectionTimeout: IMAP_SETTINGS.TIMEOUT,
                 greetingTimeout: IMAP_SETTINGS.TIMEOUT,
-                logger: false,
+                logger: {
+                    debug: (log: any, e?: any) => {
+                        const message = e ? `${e} ${JSON.stringify(log)}` : (typeof log === 'string' ? log : JSON.stringify(log));
+                        this.logger.debug(message);
+                    },
+                    info: (log: any, e?: any) => {
+                        const message = e ? `${e} ${JSON.stringify(log)}` : (typeof log === 'string' ? log : JSON.stringify(log));
+                        this.logger.log(message);
+                    },
+                    warn: (log: any, e?: any) => {
+                        const message = e ? `${e} ${JSON.stringify(log)}` : (typeof log === 'string' ? log : JSON.stringify(log));
+                        this.logger.warn(message);
+                    },
+                    error: (log: any, e?: any) => {
+                        const message = e ? `${e} ${JSON.stringify(log)}` : (typeof log === 'string' ? log : JSON.stringify(log));
+                        this.logger.error(message);
+                    },
+                } as any,
                 tls: {
                     host: this.config.host,
-                }
+                },
+
             };
 
 
@@ -94,6 +115,18 @@ export class ImapClientUtil {
             );
         } catch (error) {
             this.logger.error(`Failed to connect to IMAP: ${error.message}`);
+
+            if ((error as any).response) {
+                this.logger.error(`Server Response: ${(error as any).response}`);
+            }
+            if ((error as any).command) {
+                this.logger.error(`Failed Command: ${(error as any).command}`);
+            }
+            if ((error as any).responseStatus) {
+                this.logger.error(`Response Status: ${(error as any).responseStatus}`);
+            }
+
+            this.logger.error(error.stack);
             throw error;
         }
     }

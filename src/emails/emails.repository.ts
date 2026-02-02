@@ -41,7 +41,7 @@ export class EmailsRepository {
     async createMany(data: Prisma.EmailCreateManyInput[]): Promise<number> {
         const result = await this.prisma.email.createMany({
             data,
-            skipDuplicates: true, // Skip if UID already exists for account
+            skipDuplicates: true,
         });
         return result.count;
     }
@@ -148,6 +148,25 @@ export class EmailsRepository {
             where: {
                 accountId,
                 folder,
+            },
+            orderBy: {
+                uid: 'desc',
+            },
+            select: {
+                uid: true,
+            },
+        });
+
+        return result?.uid || 0;
+    }
+
+    /**
+     * Get highest UID for an account across ALL folders
+     */
+    async getGlobalHighestUid(accountId: string): Promise<number> {
+        const result = await this.prisma.email.findFirst({
+            where: {
+                accountId,
             },
             orderBy: {
                 uid: 'desc',

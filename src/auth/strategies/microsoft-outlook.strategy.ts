@@ -22,7 +22,7 @@ export class MicrosoftOutlookStrategy extends PassportStrategy(Strategy, 'micros
                 'openid',
                 'email',
                 'offline_access',
-                'IMAP.AccessAsUser.All',
+                'Mail.Read',
             ],
             passReqToCallback: true,
         });

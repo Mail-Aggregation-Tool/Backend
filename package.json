@@ -24,6 +24,8 @@
     "prisma:studio": "prisma studio --schema=src/prisma/schema.prisma"
   },
   "dependencies": {
+    "@azure/identity": "^4.13.0",
+    "@microsoft/microsoft-graph-client": "^3.0.7",
     "@nestjs/bullmq": "^11.0.4",
     "@nestjs/cache-manager": "^3.1.0",
     "@nestjs/common": "^11.0.1",
@@ -45,6 +47,7 @@
     "cookie-parser": "^1.4.7",
     "dotenv": "^17.2.3",
     "imapflow": "^1.2.6",
+    "isomorphic-fetch": "^3.0.0",
     "mailparser": "^3.9.1",
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
@@ -64,6 +67,7 @@
     "@swc/core": "^1.10.7",
     "@types/cookie-parser": "^1.4.10",
     "@types/express": "^5.0.0",
+    "@types/isomorphic-fetch": "^0.0.39",
     "@types/jest": "^29.5.14",
     "@types/multer": "^2.0.0",
     "@types/node": "^22.10.7",

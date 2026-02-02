@@ -225,7 +225,7 @@ export class AuthService {
         }
 
         let user: any = null;
-
+        console.log(stateUserId);
         // 1. Try to identify user by the state parameter (Authenticated session ID)
         if (stateUserId) {
             user = await this.authRepository.findUserById(stateUserId);

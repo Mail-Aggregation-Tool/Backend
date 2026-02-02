@@ -30,7 +30,7 @@ export class OAuthTokenUtil {
             params.append('grant_type', 'refresh_token');
             params.append('refresh_token', refreshToken);
             // Scope should be the same as initially requested or a subset
-            params.append('scope', 'user.read email offline_access IMAP.AccessAsUser.All');
+            params.append('scope', 'user.read email offline_access openid Mail.Read');
 
             const response = await fetch(tokenEndpoint, {
                 method: 'POST',

@@ -2,6 +2,7 @@ import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Logger } from '@nestjs/common';
 import { Job } from 'bullmq';
 import { SyncService, SyncResult } from '../../sync/sync.service';
+import { EmailAccountsRepository } from '../../email-accounts/email-accounts.repository';
 import {
     QUEUE_NAMES,
     WORKER_SETTINGS,
@@ -24,7 +25,10 @@ export interface IncrementalSyncJobData {
 export class IncrementalSyncProcessor extends WorkerHost {
     private readonly logger = new Logger(IncrementalSyncProcessor.name);
 
-    constructor(private syncService: SyncService) {
+    constructor(
+        private syncService: SyncService,
+        private emailAccountsRepository: EmailAccountsRepository,
+    ) {
         super();
     }
 
@@ -34,6 +38,15 @@ export class IncrementalSyncProcessor extends WorkerHost {
         this.logger.log(
             `[Job ${job.id}] Starting incremental sync for account ${accountId} (${email})`,
         );
+
+        // Check if account exists
+        const account = await this.emailAccountsRepository.findById(accountId);
+        if (!account) {
+            this.logger.warn(
+                `[Job ${job.id}] Account not found: ${accountId}. Skipping incremental sync.`
+            );
+            return;
+        }
 
         try {
             const results: SyncResult[] = [];
